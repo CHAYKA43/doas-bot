@@ -8,4 +8,9 @@ lib/
 temp.log
 temp2.log
 config/
-config/*
+config/token.txt
+config/db.json
+config/exceptions.txt
+config/quotes.txt
+config/swearing.txt
+config/users.txt
