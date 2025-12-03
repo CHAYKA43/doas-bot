@@ -1,7 +1,3 @@
-## Important note!
-The quotes.txt file must be created manually in advance!
-
-
 ## This bot has the following features:
 The main loop checks if the message belongs to a user on the monitoring list.</br>
 If the user is on the monitoring list, the bot checks every word in their message.</br>

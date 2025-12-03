@@ -7,7 +7,7 @@ import random
 import logging
 import sys
 
-from os import getenv
+#from os import getenv
 #from antiswear import *  ---------- no need
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
@@ -18,9 +18,9 @@ TOKEN = str()
 try:
     with open("config/token.txt", "r", encoding="utf-8") as f:
         TOKEN = str(f.read().strip())
-        print(TOKEN)
 except (FileNotFoundError):
     print("Hey there! There is no config/token.txt file!")
+    sys.exit(1)
 
 doas = AsyncTeleBot(TOKEN)
 
@@ -30,24 +30,15 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Saving time at the moment of bot start
 start_time = datetime.now(timezone.utc)
 
+# Modules
+import ml
+ml.doas = doas; ml.register()
 
-# Loads the question-and-answer database
-db_file = "config/db.json"
+import info
+info.doas = doas; info.start_time = start_time; info.register()
 
-def load_db():
-    try:
-        with open(db_file, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return []
-
-def save_db(db):
-    with open(db_file, "w", encoding="utf-8") as f:
-        json.dump(db, f, ensure_ascii=False, indent=4)
-
-db = load_db()
-
-
+#import not_used
+#not_used.doas = doas; not_used.register()
 
 # User verification function for administrator rights
 async def is_user_admin(chat_id, user_id):
@@ -58,183 +49,6 @@ async def is_user_admin(chat_id, user_id):
     if result.status in admin_statuses:
         return 1
     return 0
-
-
-# Finds the most similar question from the database
-def find_best_match(question):
-    question = question.lower()
-    best_match = None
-    best_ratio = 0.5
-    
-    logging.info(f"Finding an answer to the question: {question}")
-    
-    for item in db:
-        ratio = SequenceMatcher(None, question, item["question"]).ratio()
-        logging.info(f"Comparison with: {item['question']} (match {ratio:.2f})")
-        if ratio > best_ratio:
-            best_ratio = ratio
-            best_match = item
-        elif ratio == best_ratio and best_match:
-            best_match = random.choice([best_match, item])
-    
-    if best_match:
-        logging.info(f"Selected answer: {best_match['answer']} (match {best_ratio:.2f})")
-    else:
-        logging.info("No suitable answer was found.")
-    
-    return best_match
-
-
-# Checks a question-answer pair for duplicates
-def is_duplicate(question, answer):
-    question = question.lower()
-    answer = answer.strip()
-    for item in db:
-        if SequenceMatcher(None, question, item["question"]).ratio() > 0.9 and SequenceMatcher(None, answer, item["answer"]).ratio() > 0.9:
-            return True
-    return False
-
-
-
-# Command to add a new question-answer pair
-@doas.message_handler(commands=["teach"])
-async def terach(message):
-    if "=" not in message.text:
-        await doas.reply_to(message, "Usage: /teach Question=Answer")
-        return
-    
-    _, data = message.text.split("/teach", 1)
-    question, answer = data.strip().split("=", 1)
-    question = question.strip().lower()
-    answer = answer.strip()
-    
-    if not is_duplicate(question, answer):
-        db.append({"question": question, "answer": answer})
-        save_db(db)
-        logging.info(f"A new pair has been added: {question} = {answer}")
-        await doas.reply_to(message, "Got it!")
-    else:
-        await doas.reply_to(message, "Such a question-answer pair already exists.")
-
-
-# Command to ask the bot a question
-@doas.message_handler(commands=["ask"])
-async def ask(message):
-    _, question = message.text.split("/ask", 1)
-    question = question.strip().lower()
-    best_match = find_best_match(question)
-    
-    if best_match:
-        await doas.reply_to(message, best_match["answer"])
-    else:
-        await doas.reply_to(message, "I don't know the answer to that.")
-
-
-# Sending a quote
-@doas.message_handler(commands=['quote'])
-async def quote(message):
-    fortun = fortune.get_random_fortune('config/quotes.txt')
-    
-    await doas.reply_to(message,f'`{fortun}`')
-
-
-# Adding a user to the users monitoring list
-@doas.message_handler(commands=['add_user'])
-async def add_user(message):
-    chat_id = message.chat.id
-    user_id = message.from_user.id
-    result = await is_user_admin(chat_id, user_id)
-
-    # Checking a user for administrator rights
-    if result == 0:
-        await doas.reply_to(message, "You do not have permission to run this command.")
-        return
-    # Checking a command for an argument
-    args = message.text.split()
-    if len(args) < 2:
-        await doas.reply_to(message, "Please enter a user ID. \nExample: /add_user 123123123")
-        return
-
-    user_to_add = args[1]
-    print(f"Attempting to add user: {user_to_add}") # Debugging to the console
-
-    # Handling errors and adding a user to the list
-    try:
-        with open('config/users.txt', 'r') as file:
-            existing_users = file.read().splitlines()
-
-        # Sending an error message that the user is already on the list
-        if user_to_add in (user.lower() for user in existing_users):
-            await doas.reply_to(message, f"The user ID '{user_to_add}' already exists in the list.")
-            return
-
-        # Adding a user to the list
-        with open('config/users.txt', 'a') as file:
-            file.write(f'\n{user_to_add}')
-
-        # Sending a message that the user has been successfully added to the list
-        await doas.reply_to(message, f"User ID '{user_to_add}' added.")
-    # Sending an error message
-    except Exception as e:
-        await doas.reply_to(message, f"An error occurred: {str(e)}")
-
-
-# Removing a user from the users monitoring list
-@doas.message_handler(commands=['remove_user'])
-async def remove_user(message):
-    chat_id = message.chat.id
-    user_id = message.from_user.id
-    result = await is_user_admin(chat_id, user_id)
-
-    # Checking a user for administrator rights
-    if result == 0:
-        await doas.reply_to(message, "You do not have permission to run this command.")
-        return
-    # Checking a command for an argument
-    args = message.text.split()
-    if len(args) < 2:
-        await doas.reply_to(message, "Please enter user ID. \nExample: /remove_user 123123123")
-        return
-
-    user_id_to_remove = args[1]
-    print(f"Removing a user: ID = {user_id_to_remove}")  # Debugging to the console
-
-    # Handling errors and removing a user from the list
-    try:
-        with open('config/users.txt', 'r') as file:
-            users = file.readlines()
-            
-        # Removing a user from the list
-        with open('config/users.txt', 'w') as file:
-            for user in users:
-                if user.strip() != user_id_to_remove:
-                    file.write(user)
-
-        # Sending a message that the user has been successfully removed from the list
-        await doas.reply_to(message, f"User ID: {user_id_to_remove} has been removed.")
-    # Sending an error message that the file with the list of users was not found
-    except FileNotFoundError:
-        await doas.reply_to(message, "User list not found.")
-    # Sending an error message
-    except Exception as e:
-        await doas.reply_to(message, f"An error occurred: {str(e)}")
-
-
-# Command to find out how long the bot has been running
-@doas.message_handler(commands=['uptime'])
-async def send_uptime(message):
-    current_time = datetime.now(timezone.utc)
-    uptime_duration = current_time - start_time
-
-    # Getting days hours and minutes from bot running time
-    days = uptime_duration.days
-    hours, remainder = divmod(uptime_duration.seconds, 3600)
-    minutes, seconds = divmod(remainder, 60)
-
-    # Formatting and sending a message to a user
-    uptime_str = f"{days} days, {hours} hours, {minutes} minutes."
-    await doas.send_message(message.chat.id, f'The bot has been running for: \n{uptime_str}')
-
 
 # Function for searching and removing swear words from users in the monitoring list
 @doas.message_handler(func=lambda message: True)
