@@ -37,6 +37,9 @@ ml.doas = doas; ml.register()
 import info
 info.doas = doas; info.start_time = start_time; info.register()
 
+import fun
+fun.doas = doas; fun.register()
+
 #import not_used
 #not_used.doas = doas; not_used.register()
 
