@@ -9,7 +9,7 @@ def register():
     @doas.message_handler(commands=["ver", "info"])
     async def ver(message):
         # spaghetti string
-        await doas.reply_to(message, "<b>Version:</b> 0.6.6 M1\n<b>Telegram library:</b> Telebot\n<b>Language:</b> Python", parse_mode='HTML')
+        await doas.reply_to(message, "<b>Version:</b> 0.6.6 M2\n<b>Telegram library:</b> Telebot\n<b>Language:</b> Python", parse_mode='HTML')
         
     # Command to find out how long the bot has been running
     @doas.message_handler(commands=["uptime"])

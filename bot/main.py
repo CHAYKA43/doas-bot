@@ -40,18 +40,11 @@ info.doas = doas; info.start_time = start_time; info.register()
 import fun
 fun.doas = doas; fun.register()
 
+import utils
+utils.doas = doas; utils.register()
+
 #import not_used
 #not_used.doas = doas; not_used.register()
-
-# User verification function for administrator rights
-async def is_user_admin(chat_id, user_id):
-    admin_statuses = ["creator", "administrator"]
-    if str(user_id) == "YOUR_ID": # God mode
-        return 1
-    result = await doas.get_chat_member(chat_id, user_id)
-    if result.status in admin_statuses:
-        return 1
-    return 0
 
 # Function for searching and removing swear words from users in the monitoring list
 @doas.message_handler(func=lambda message: True)

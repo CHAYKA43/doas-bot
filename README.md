@@ -1,7 +1,6 @@
 # doas!bot
 
 ![Language](https://img.shields.io/badge/language%20-%20Python-blue)
-![OS](https://img.shields.io/badge/OS-linux-blue)
 ![License](https://img.shields.io/github/license/leadway-team/doas-bot)
 ![GitHub last commit](https://img.shields.io/github/last-commit/leadway-team/doas-bot)</br>
 
@@ -31,8 +30,8 @@ And run:
 
 ## Dependencies
 
-- Linux operating system
-- Python 3.9+
+- Linux recommended, but not required
+- Python 3.9+ (3.10 recommended)
 
 
 ## Commands
