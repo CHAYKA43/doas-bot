@@ -44,7 +44,7 @@ def register():
         await doas.reply_to(message, f"User with ID {args[1]} now is unbanned.")
     
     @doas.message_handler(commands=["kick"])
-    async def ban(message):
+    async def kick(message):
         admin_or_not = await is_user_admin(message.chat.id, message.from_user.id)
         
         # Checking a user for administrator rights
