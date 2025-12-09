@@ -76,6 +76,8 @@ def register():
         
         ttt_data[f"{ID}"] = {
             "users": [message.from_user.username, args[1].replace("@", "")],
+            "current_player": message.from_user.username,
+            "winner": None,
             "index": 0,
             "field": [[" ", " ", " "],
                       [" ", " ", " "],
@@ -90,7 +92,7 @@ def register():
             btn3 = telebot.types.InlineKeyboardButton(text=" ", callback_data=f"ttt{i}x3i{ID}")
             markup.row(btn1, btn2, btn3)
         
-        await doas.reply_to(message, "The game has begun.", reply_markup=markup)
+        await doas.reply_to(message, f"The game has begun.\nCurrent player: {ttt_data[f"{ID}"]["current_player"]}", reply_markup=markup)
     
     @doas.callback_query_handler(func=lambda call: True)
     async def query_handler(call):
@@ -98,33 +100,87 @@ def register():
             y, x, ID = map(int, call.data.replace("x", " ").replace("i", " ").replace("ttt", "").split())
             #await doas.reply_to(call.message, f"ID: {ID}, x: {x}, y:{y}")
             
+            await doas.answer_callback_query(call.id)
+
             try:
-                local_ttt_data = ttt_data[f"{ID}"]
-                field = local_ttt_data["field"]
+                ttt_data[f"{ID}"]
             except:
                 await doas.reply_to(call.message, "This game is no longer available.\nYou can start a new one: /ttt @username")
+                await doas.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
                 return
-            
-            if (local_ttt_data["index"] % 2) == 0 and call.from_user.username == local_ttt_data["users"][0]:
-                field[y-1][x-1] = "X"
-            elif call.from_user.username == local_ttt_data["users"][1]:
-                field[y-1][x-1] = "O"
+
+            if call.from_user.username != ttt_data[f"{ID}"]["current_player"]:
+                await doas.reply_to(call.message, f"@{call.from_user.username}, go fuck yourself.")
+                return
+
+            if (ttt_data[f"{ID}"]["index"] % 2) == 0 and call.from_user.username == ttt_data[f"{ID}"]["users"][0]:
+                if ttt_data[f"{ID}"]["field"][y-1][x-1] == " ":
+                    ttt_data[f"{ID}"]["field"][y-1][x-1] = "X"
+                    ttt_data[f"{ID}"]["current_player"] = ttt_data[f"{ID}"]["users"][1]
+                else:
+                    await doas.reply_to(call.message, f"@{call.from_user.username}, go fuck yourself.")
+                    return
+            elif call.from_user.username == ttt_data[f"{ID}"]["users"][1]:
+                if ttt_data[f"{ID}"]["field"][y-1][x-1] == " ":
+                    ttt_data[f"{ID}"]["field"][y-1][x-1] = "O"
+                    ttt_data[f"{ID}"]["current_player"] = ttt_data[f"{ID}"]["users"][0]
+                else:
+                    await doas.reply_to(call.message, f"@{call.from_user.username}, go fuck yourself.")
+                    return
             else:
                 await doas.reply_to(call.message, f"{call.from_user.username}, but you can't.")
                 return
             
-            local_ttt_data["index"] += 1
+            ttt_data[f"{ID}"]["index"] += 1
             
             markup = telebot.types.InlineKeyboardMarkup()
             for i in range(0, 3):
-                btn1 = telebot.types.InlineKeyboardButton(text=f"{field[i][0]}", callback_data=f"ttt{i+1}x1i{ID}")
-                btn2 = telebot.types.InlineKeyboardButton(text=f"{field[i][1]}", callback_data=f"ttt{i+1}x2i{ID}")
-                btn3 = telebot.types.InlineKeyboardButton(text=f"{field[i][2]}", callback_data=f"ttt{i+1}x3i{ID}")
+                btn1 = telebot.types.InlineKeyboardButton(text=f"{ttt_data[f"{ID}"]["field"][i][0]}", callback_data=f"ttt{i+1}x1i{ID}")
+                btn2 = telebot.types.InlineKeyboardButton(text=f"{ttt_data[f"{ID}"]["field"][i][1]}", callback_data=f"ttt{i+1}x2i{ID}")
+                btn3 = telebot.types.InlineKeyboardButton(text=f"{ttt_data[f"{ID}"]["field"][i][2]}", callback_data=f"ttt{i+1}x3i{ID}")
                 markup.row(btn1, btn2, btn3)
             
-            if local_ttt_data["index"] != 9:
+            if ttt_data[f"{ID}"]["index"] != 9:
                 await doas.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                                            text=f"{call.from_user.username} strikes the DECISIVE blow!", reply_markup=markup)
+                                            text=f"{call.from_user.username} strikes the DECISIVE blow!\nCurrent player: {ttt_data[f"{ID}"]["current_player"]}", reply_markup=markup)
+                for i in range(3):
+                    if ttt_data[f"{ID}"]["field"][i][0] == ttt_data[f"{ID}"]["field"][i][1] == ttt_data[f"{ID}"]["field"][i][2] != " ":
+                        if ttt_data[f"{ID}"]["field"][i][0] == "X":
+                            ttt_data[f"{ID}"]["winner"] = ttt_data[f"{ID}"]["users"][0]
+                        else:
+                            ttt_data[f"{ID}"]["winner"] = ttt_data[f"{ID}"]["users"][1]
+                        await doas.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                                text=f"@{ttt_data[f"{ID}"]["winner"]} wins!", reply_markup=markup)
+                        del ttt_data[f"{ID}"]
+                        return
+                for i in range(3):
+                    if ttt_data[f"{ID}"]["field"][0][i] == ttt_data[f"{ID}"]["field"][1][i] == ttt_data[f"{ID}"]["field"][2][i] != " ":
+                        if ttt_data[f"{ID}"]["field"][0][i] == "X":
+                            ttt_data[f"{ID}"]["winner"] = ttt_data[f"{ID}"]["users"][0]
+                        else:
+                            ttt_data[f"{ID}"]["winner"] = ttt_data[f"{ID}"]["users"][1]
+                        await doas.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                                text=f"@{ttt_data[f"{ID}"]["winner"]} wins!", reply_markup=markup)
+                        del ttt_data[f"{ID}"]
+                        return
+                if ttt_data[f"{ID}"]["field"][0][0] == ttt_data[f"{ID}"]["field"][1][1] == ttt_data[f"{ID}"]["field"][2][2] != " ":
+                        if ttt_data[f"{ID}"]["field"][0][0] == "X":
+                            ttt_data[f"{ID}"]["winner"] = ttt_data[f"{ID}"]["users"][0]
+                        else:
+                            ttt_data[f"{ID}"]["winner"] = ttt_data[f"{ID}"]["users"][1]
+                        await doas.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                                text=f"@{ttt_data[f"{ID}"]["winner"]} wins!", reply_markup=markup)
+                        del ttt_data[f"{ID}"]
+                        return
+                if ttt_data[f"{ID}"]["field"][0][2] == ttt_data[f"{ID}"]["field"][1][1] == ttt_data[f"{ID}"]["field"][2][0] != " ":
+                        if ttt_data[f"{ID}"]["field"][0][2] == "X":
+                            ttt_data[f"{ID}"]["winner"] = ttt_data[f"{ID}"]["users"][0]
+                        else:
+                            ttt_data[f"{ID}"]["winner"] = ttt_data[f"{ID}"]["users"][1]
+                        await doas.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                                text=f"@{ttt_data[f"{ID}"]["winner"]} wins!", reply_markup=markup)
+                        del ttt_data[f"{ID}"]
+                        return
             else:
                 await doas.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                             text="Nobody wins!", reply_markup=markup)
