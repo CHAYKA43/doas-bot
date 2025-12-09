@@ -98,15 +98,22 @@ def register():
             y, x, ID = map(int, call.data.replace("x", " ").replace("i", " ").replace("ttt", "").split())
             #await doas.reply_to(call.message, f"ID: {ID}, x: {x}, y:{y}")
             
-            local_ttt_data = ttt_data[f"{ID}"]
-            field = local_ttt_data["field"]
+            try:
+                local_ttt_data = ttt_data[f"{ID}"]
+                field = local_ttt_data["field"]
+            except:
+                await doas.reply_to(call.message, "This game is no longer available.\nYou can start a new one: /ttt @username")
+                return
             
-            if local_ttt_data["index"] == 0 and call.from_user.username == local_ttt_data["users"][0]:
+            if (local_ttt_data["index"] % 2) == 0 and call.from_user.username == local_ttt_data["users"][0]:
                 field[y-1][x-1] = "X"
-                local_ttt_data["index"] = 1
             elif call.from_user.username == local_ttt_data["users"][1]:
                 field[y-1][x-1] = "O"
-                local_ttt_data["index"] = 0
+            else:
+                await doas.reply_to(call.message, f"{call.from_user.username}, but you can't.")
+                return
+            
+            local_ttt_data["index"] += 1
             
             markup = telebot.types.InlineKeyboardMarkup()
             for i in range(0, 3):
@@ -115,5 +122,10 @@ def register():
                 btn3 = telebot.types.InlineKeyboardButton(text=f"{field[i][2]}", callback_data=f"ttt{i+1}x3i{ID}")
                 markup.row(btn1, btn2, btn3)
             
-            await doas.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                                        text=f"{call.from_user.username} strikes the DECISIVE blow!", reply_markup=markup)
+            if local_ttt_data["index"] != 9:
+                await doas.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                            text=f"{call.from_user.username} strikes the DECISIVE blow!", reply_markup=markup)
+            else:
+                await doas.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                            text="Nobody wins!", reply_markup=markup)
+                del ttt_data[f"{ID}"]
